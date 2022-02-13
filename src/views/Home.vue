@@ -1,22 +1,86 @@
 <template>
-	<div class="home">
-		aaaaaaaaaaa
+	<div class="title_screen_container">
+		<span class="main_title">Blind Party</span>
+		<span class="button" @click="login">Start</span>
 	</div>
 </template>
 
-<script>
+<style scoped>
+	@import url('https://fonts.googleapis.com/css2?family=Audiowide&display=swap');
+	.title_screen_container {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: space-around;
+		height: 100vh;
+	}
 
-export default {
-	name: 'Home',
-	setup() {
-		window.onSpotifyWebPlaybackSDKReady = () => {
-			const token = 'BQCZ1sVWEYCRa1-wsYTFeRQfkoBjp6C1BQy6m2LvIBjAy-R2UQkdjVIRcW-uv3mrfRsasmCSX_kCMk5yD1MaQJ3NyyAaArFCisD_3Zw-DoS4X6sZ7rjZX9yV0i7rdhN7DlKOkEiGi6YHcC6_Ea3SBa3nmK4VICbmy4kSVraQL1RV_nYOmNuc2UA'
-			const player = new Spotify.Player({
-				name: 'Web Playback SDK Quick Start Player',
-				getOAuthToken: cb => { cb(token); },
-				volume: 0.5
-			});
+	.main_title {
+		font-family: Audiowide;
+		letter-spacing: 3vw;
+		font-size: 10vw;
+		text-align: center;
+		display: block;
+	}
+
+	.button {
+		font-family: Audiowide;
+		font-size: 6vw;
+		padding: 40px 60px;
+		transition: 300ms;
+		border-radius: 20px;
+		border: var(--text-color) 6px solid;
+		background-color: var(--background-color);
+		color: var(--text-color);
+		fill: var(--text-color);
+		cursor: pointer;
+	}
+
+	.button:hover {
+		color: var(--background-color);
+		fill: var(--background-color);
+		background-color: var(--accent-color);
+		border-color: var(--background-color);
+	}
+</style>
+
+<script>
+	import router from '@/router/index.js'
+
+	function generateRandomString(length) {
+		const possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
+		let text = ''
+
+		for (let i = 0; i < length; i++) {
+			text += possible.charAt(Math.floor(Math.random() * possible.length))
+		}
+		return text
+	}
+
+	export default {
+		name: 'Home',
+		setup() {
+			const login = () => {
+				const client_id = '905e8a6aec324988a525cc0f690c9f63'
+				const scope = 'user-read-private user-read-email streaming'
+				const redirect_uri = new URL(router.resolve({ name: 'Menu' }).href, window.location.href).href
+				const state = generateRandomString(16)
+
+				localStorage.setItem('spotify_auth_state', state)
+
+				const url = 'https://accounts.spotify.com/authorize'
+					+ '?response_type=token'
+					+ '&client_id=' + encodeURIComponent(client_id)
+					+ '&scope=' + encodeURIComponent(scope)
+					+ '&redirect_uri=' + encodeURIComponent(redirect_uri)
+					+ '&state=' + encodeURIComponent(state)
+
+				window.location = url
+			}
+
+			return {
+				login,
+			}
 		}
 	}
-}
 </script>
