@@ -1,12 +1,12 @@
 <template>
 	<div class="game_container">
 		<div class="answer">
-			<div class="title"></div>
-			<div class="date"></div>
-			<div class="album"></div>
-			<div class="author"></div>
+			<div class="title">{{ title }}</div>
+			<div class="date">{{ date }}</div>
+			<div class="album">{{ album }}</div>
+			<div class="author">{{ author }}</div>
 			<div class="image">
-				<img/>
+				<img ref="image"/>
 			</div>
 		</div>
 		<div class="disk-reader">
@@ -23,7 +23,7 @@
 				<div class="bar-4"></div>
 			</div>
 			<div class="timer circle">
-				<span class="timer_number"></span>
+				<span class="timer_number" ref="timer_number"></span>
 			</div>
 		</div>
 
@@ -33,7 +33,7 @@
 		<div class="audio_visualisation">
 
 		</div>
-		<div class="borders">
+		<div class="borders" ref="borders">
 			<span class="border top right vertical"></span>
 			<span class="border top right horizontal"></span>
 			<span class="border top left vertical"></span>
@@ -259,71 +259,156 @@
 </style>
 
 <script>
+	import { ref, watch, onMounted } from 'vue'
+	import spotify from '@/api/spotify.js'
+
 	export default {
 		name: 'Play',
 		setup() {
-			let script = document.createElement('script')
-			script.setAttribute('src', 'https://sdk.scdn.co/spotify-player.js')
-			document.body.appendChild(script)
+			let start_time = 10
+			let after_time = 5
+			let timer = start_time
+			let autoplay = true
+			let interval = null
+			//let game_rules_edition = false
+			//let volume = 3
+			//let number_of_bars = 50
 
-			window.onSpotifyWebPlaybackSDKReady = () => {
-				/*globals Spotify:false */
-				const player = new Spotify.Player({
-					name: 'Web Playback SDK Quick Start Player',
-					getOAuthToken: cb => { cb(localStorage.getItem('spotify_token')) },
-					volume: 0.5
-				})
+			//let audio = null
+			//let frequencyData = null
 
-				// Ready
-				player.addListener('ready', ({ device_id }) => {
-					localStorage.setItem('device_id', device_id)
-					console.log('Ready with Device ID', device_id)
-				})
+			const gamerules = {
+				Autoplay: true,
+				Theme: '#000, #fff'
+			}
 
-				// Not Ready
-				player.addListener('not_ready', ({ device_id }) => {
-					console.log('Device ID has gone offline', device_id)
-				})
+			const title = ref('')
+			const date = ref('')
+			const album = ref('')
+			const author = ref('')
+			const image = ref(null)
 
-				player.addListener('initialization_error', ({ message }) => {
-					console.error(message)
-				})
+			const borders = ref(null)
+			/*const buttons = {
+				start_game: document.querySelector('.start_button'),
+				full_screen: document.querySelector('.full_screen'),
+				open_gamerule: document.querySelector('.open_gamerule'),
+				close_gamerule: document.querySelector('.close_gamerule')
+			}*/
+			/*const interfaces = {
+				volume_bar: document.querySelector('.volume_bar'),
+				volume_bar_value: document.querySelector('.volume_bar_value'),
+			}*/
+			//const audio = document.querySelector('.music')
+			const timer_number = ref(null)
 
-				player.addListener('authentication_error', ({ message }) => {
-					console.error(message)
-				})
+			function animationTime(customTime = timer){
+				const ratio = ((start_time - customTime) / start_time)
+				const deg = ratio * 360
+				const percentage = ratio * 100
+				const start = 21
+				const end = 42
+				document.documentElement.style.setProperty('--rotation-timer', deg + 'deg')
+				borders.value.querySelectorAll('.border.horizontal').forEach(e => { e.style.setProperty('width', (percentage / 2) + 'vw') })
+				borders.value.querySelectorAll('.border.vertical').forEach(e => { e.style.setProperty('height', (percentage / 2) + 'vh') })
+				document.body.style.setProperty('--rotation', (ratio * (end - start) + start) + 'deg')
+			}
 
-				player.addListener('account_error', ({ message }) => {
-					console.error(message)
-				})
+			function showAnswer(){
+				setTimeout(() => {
+					title.value = 'MoonSoon'
+					date.value = '2013'
+					album.value = 'Risk of rain'
+					author.value = 'Chris Christodoulou'
+					image.value.style.setProperty('transform', 'rotate(0deg) scale(100%)')
+					document.body.classList.add('ended')
+				}, 1000)
+				translateTheme('#fff, #242132, #FFA800')
+			}
 
-				player.connect()
+			function startMusic(){
+				//containers.game_screen.classList.remove('disable')
+				image.value.setAttribute('src', './risk_of_rain.jpg')
+				nextMusic()
+			}
 
-				const play = ({
-					spotify_uri,
-					playerInstance: {
-						_options: {
-							getOAuthToken
+			function stopMusic() {
+				title.value = ''
+				date.value = ''
+				album.value = ''
+				author.value = ''
+				image.value.style.setProperty('transform', 'rotate(360deg) scale(0%)')
+				document.body.classList.remove('ended')
+				document.documentElement.style.setProperty('--rotation-timer', '0deg')
+				translateTheme(gamerules.Theme)
+				animationTime(start_time)
+			}
+
+			function nextMusic() {
+				timer = start_time
+				timer_number.value.innerHTML = timer
+				
+				if(interval){
+					clearInterval(interval)
+				}
+
+				interval = setInterval(() => {
+					timer--
+					if (timer >= 0) {
+						timer_number.value.innerHTML = timer + 1
+						animationTime()
+					}
+					if (timer == 0) {
+						showAnswer()
+					}
+					if (timer == -1) {
+						timer_number.value.innerHTML = 0
+					}
+					if (timer < -(after_time-1)) {
+						stopMusic()
+					}
+					if (timer < -after_time) {
+						if (autoplay) {
+							nextMusic()
 						}
 					}
-				}) => {
-					getOAuthToken(access_token => {
-						fetch(`https://api.spotify.com/v1/me/player/play?device_id=${localStorage.getItem('device_id')}`, {
-							method: 'PUT',
-							body: JSON.stringify({ uris: [spotify_uri] }),
-							headers: {
-								'Content-Type': 'application/json',
-								'Authorization': `Bearer ${access_token}`
-							},
-						});
-					});
-				};
+				}, 1000)
+			}
 
-				play({
-					playerInstance: player,
-					spotify_uri: 'spotify:track:7xGfFoTpQ2E7fRF5lN10tr',
-				});
+			function translateTheme(theme){
+				const colors = theme.split(', ')
+				if (colors.length == 2) {
+					updateTheme(colors[0], colors[1])
+				} else if (colors.length > 2) {
+					updateTheme(colors[0], colors[1], colors[2])
+				}else{
+					console.warn('bad theme')
+				}
+			}
 
+			function updateTheme(textColor, backgroundColor, accentColor = textColor){
+				document.documentElement.style.setProperty('--text-color', textColor)
+				document.documentElement.style.setProperty('--background-color', backgroundColor)
+				document.documentElement.style.setProperty('--accent-color', accentColor)
+			}
+
+			onMounted(() => {
+				watch(spotify.ready, ready => {
+					if (ready) {
+						spotify.play('spotify:track:7xGfFoTpQ2E7fRF5lN10tr')
+						startMusic()
+					}
+				})
+			})
+
+			return {
+				title,
+				date,
+				album,
+				author,
+				image,
+				borders,
+				timer_number,
 			}
 		}
 	}

@@ -31,13 +31,13 @@
 			const params = getHashParams()
 
 			if (params.access_token && (params.state == null || params.state !== localStorage.getItem('spotify_auth_state'))) {
-				router.push('Home')
+				router.push({ name: 'Home' })
 			} else {
 				localStorage.removeItem('spotify_auth_state')
 				if (params.access_token) {
 					localStorage.setItem('spotify_token', params.access_token)
 				} else {
-					router.push('Home')
+					router.push({ name: 'Home' })
 				}
 			}
 		}

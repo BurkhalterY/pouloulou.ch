@@ -33,7 +33,7 @@
 
 		width: 100%;
 		height: 100vh;
-		/*background-color: var(--color-lv4);*/
+		background-color: var(--color-lv4);
 	}
 
 	@media (max-width: 70vh) {
