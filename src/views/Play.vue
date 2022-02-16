@@ -1,14 +1,5 @@
 <template>
-	<div class="game_container">
-		<div class="answer">
-			<div class="title">{{ title }}</div>
-			<div class="date">{{ date }}</div>
-			<div class="album">{{ album }}</div>
-			<div class="author">{{ author }}</div>
-			<div class="image">
-				<img ref="image"/>
-			</div>
-		</div>
+	<div class="game-container">
 		<div class="disk-reader">
 			<div class="disk">
 				<div class="part-1 circle"></div>
@@ -23,17 +14,28 @@
 				<div class="bar-4"></div>
 			</div>
 			<div class="timer circle">
-				<span class="timer_number" ref="timer_number"></span>
+				<span class="timer-number">{{ Math.min(Math.max(timer, 0), startTimer) }}</span>
 			</div>
 		</div>
 
-		<div class="volume_bar disable">
-			<div class="volume_bar_value"></div>
+		<div class="answer" v-if="currentTrack" :class="{ disable: !showAnswer}">
+			<div class="attribute">Artiste : {{ currentTrack.artists.map(artist => artist.name).join() }}</div>
+			<div class="attribute">Titre : {{ currentTrack.name }}</div>
+			<div class="attribute">Album : {{ currentTrack.album.name }} ({{ new Date(currentTrack.album.release_date).getFullYear() }})</div>
+			<div class="image">
+				<img crossOrigin="Anonymous" :src="currentTrack.album.images[0].url" ref="image"/>
+			</div>
 		</div>
-		<div class="audio_visualisation">
 
+		<div class="controls" v-if="ready">
+			<button @click="play">Play</button>
+			<button @click="skip">Skip</button>
 		</div>
-		<div class="borders" ref="borders">
+		<div class="loading" v-else>
+			<span>Loading...</span>
+		</div>
+
+		<div class="borders">
 			<span class="border top right vertical"></span>
 			<span class="border top right horizontal"></span>
 			<span class="border top left vertical"></span>
@@ -47,30 +49,25 @@
 </template>
 
 <style scoped>
-	.volume_bar {
-		margin: 20px;
-		opacity: 1;
-		background-color: transparent;
-		border: 6px solid var(--color-lv3);
-		width: 20px;
-		height: 200px;
-		display: flex;
-		align-items: flex-end;
-	}
-
-	.volume_bar_value {
-		width: 20px;
-		height: 0;
-		background-color: var(--color-lv5);
-		bottom: 0;
+	.game-container {
+		background-color: v-bind('colors[3]');
+		height: 100vh;
 	}
 
 	.border {
 		width: calc(0.5 * var(--size-ref));
 		height: calc(0.5 * var(--size-ref));
-		background-color: var(--color-lv6);
+		background-color: v-bind('colors[5]');
 		position: absolute;
-		transition: 1000ms linear;
+		transition: v-bind('transition + "ms"') linear;
+	}
+
+	.border.horizontal {
+		width: v-bind('borders.width + "vw"');
+	}
+
+	.border.vertical {
+		height: v-bind('borders.height + "vh"');
 	}
 
 	.border.top {
@@ -103,25 +100,25 @@
 	.circle.part-1 {
 		width: calc(10 * var(--size-ref));
 		height: calc(10 * var(--size-ref));
-		background-color: var(--color-lv5);
+		background-color: v-bind('colors[4]');
 	}
 
 	.circle.part-2 {
 		width: calc(9 * var(--size-ref));
 		height: calc(9 * var(--size-ref));
-		background-color: var(--color-lv6);
+		background-color: v-bind('colors[5]');
 	}
 
 	.circle.part-3 {
 		width: calc(3 * var(--size-ref));
 		height: calc(3 * var(--size-ref));
-		background-color: var(--color-lv5);
+		background-color: v-bind('colors[4]');
 	}
 
 	.circle.part-4 {
 		width: calc(1 * var(--size-ref));
 		height: calc(1 * var(--size-ref));
-		background-color: var(--color-lv1);
+		background-color: v-bind('colors[0]');
 	}
 
 	.reader * {
@@ -133,7 +130,7 @@
 		height: calc(4 * var(--size-ref));
 		top: calc(0 * var(--size-ref));
 		left: calc(11 * var(--size-ref));
-		background-color: var(--color-lv3);
+		background-color: v-bind('colors[2]');
 	}
 
 	.reader .bar-2 {
@@ -141,7 +138,7 @@
 		height: calc(3 * var(--size-ref));
 		top: calc(4 * var(--size-ref));
 		left: calc(11.75 * var(--size-ref));
-		background-color: var(--color-lv1);
+		background-color: v-bind('colors[0]');
 	}
 
 	.reader .bar-3 {
@@ -149,7 +146,7 @@
 		height: calc(3 * var(--size-ref));
 		top: calc(6.84 * var(--size-ref));
 		left: calc(11.24 * var(--size-ref));
-		background-color: var(--color-lv1);
+		background-color: v-bind('colors[0]');
 		transform: rotate(20deg);
 	}
 
@@ -158,24 +155,20 @@
 		height: calc(1.5 * var(--size-ref));
 		top: calc(9 * var(--size-ref));
 		left: calc(10.45 * var(--size-ref));
-		background-color: var(--color-lv3);
+		background-color: v-bind('colors[2]');
 		transform: rotate(20deg);
 	}
 
 	.reader {
 		transform-origin: calc(12 * var(--size-ref)) calc(2 * var(--size-ref));
-		transform: rotate(var(--rotation));
-		transition: 1s linear;
-	}
-
-	body.ended .reader {
-		transform: rotate(0deg);
+		transform: v-bind('"rotate(" + rotation + "deg)"');
+		transition: v-bind('transition + "ms"') linear;
 	}
 
 	.timer {
 		position: absolute;
-		border: calc(0.2 * var(--size-ref)) solid var(--color-lv3);
-		background-color: var(--color-lv7);
+		border: calc(0.2 * var(--size-ref)) solid v-bind('colors[2]');
+		background-color: v-bind('colors[6]');
 		width: calc(3 * var(--size-ref));
 		height: calc(3 * var(--size-ref));
 		top: calc(0.25 * var(--size-ref));
@@ -185,11 +178,10 @@
 		justify-content: center;
 	}
 
-	.timer_number {
+	.timer-number {
 		font-family: Audiowide;
-		font-size: calc(2 * var(--size-ref));
-		color: var(--color-lv1);
-		padding-top: calc(0.4 * var(--size-ref));
+		font-size: calc(1.5 * var(--size-ref));
+		color: v-bind('colors[0]');
 		z-index: 1;
 	}
 
@@ -199,19 +191,65 @@
 		padding-left: calc(1.5 * var(--size-ref));
 		height: calc(0.2 * var(--size-ref));
 		position: absolute;
-		background-color: var(--color-lv5);
+		background-color: v-bind('colors[4]');
 		background-clip: content-box;
-		transform: rotate(var(--rotation-timer));
-		transition: 1000ms linear;
+		transform: v-bind('"rotate(" + rotationTimer + "deg)"');
+		transition: v-bind('transition + "ms"') linear;
 		z-index: 0;
 	}
 
 	.disk-reader {
-		position: relative;
+		position: absolute;
 		width: calc(14 * var(--size-ref));
 		height: calc(11 * var(--size-ref));
 		top: calc(1 * var(--size-ref));
 		left: calc(1 * var(--size-ref));
+	}
+
+	.answer {
+		position: absolute;
+		width: calc(14 * var(--size-ref));
+		height: calc(11 * var(--size-ref));
+		top: calc(1 * var(--size-ref));
+		right: calc(1 * var(--size-ref));
+	}
+
+	.answer .attribute {
+		color: white;
+		font-family: consolas;
+	}
+
+	.image img {
+		max-width: 100%;
+	}
+
+	.controls, .loading {
+		display: flex;
+		justify-content: space-evenly;
+		position: absolute;
+		bottom: calc(0.5 * var(--size-ref));
+		width: 100%;
+	}
+
+	.controls > button {
+		width: 200px;
+		height: 100px;
+		background-color: v-bind('colors[4]');
+		border: none;
+		border-left: 5px solid v-bind('colors[6]');
+		border-right: 5px solid v-bind('colors[6]');
+		font-size: 300%;
+		font-family: Audiowide;
+	}
+
+	.controls > button:active {
+		transform-origin:  bottom center;
+		transform: rotateX(30deg);
+		background-image: linear-gradient(v-bind('colors[4]'), v-bind('colors[5]'));
+	}
+
+	.loading {
+		font-size: 500%;
 	}
 
 	@media (max-width: 70vh) {
@@ -223,35 +261,17 @@
 			top: calc(2 * var(--size-ref));
 			left: calc( 0 * var(--size-ref));
 		}
+		.answer {
+			transform: rotate(-90deg);
+			top: calc(2 * var(--size-ref));
+			right: calc( 0 * var(--size-ref));
+		}
 		.timer {
 			transform: rotate(90deg);
 		}
 	}
 
-	.audio_visualisation {
-		position: absolute;
-		right: 0;
-		left: 0;
-		bottom: 0;
-		margin: calc(1 * var(--size-ref));
-		height: calc(4 * var(--size-ref));
-		display: flex;
-		flex-direction: row;
-		align-items: center;
-		justify-content: space-around;
-		z-index: -1;
-		background-color: var(--color-lv7);
-	}
-
-	.audio_visualisation__bar {
-		height: calc(3 * var(--size-ref));
-		background-color: var(--color-lv2);
-		border-radius: calc(0.2 * var(--size-ref));
-		width: calc(0.2 * var(--size-ref));
-		transition: 0ms;
-	}
-
-	.answer, .disable {
+	.disable {
 		position: absolute;
 		opacity: 0;
 		pointer-events: none;
@@ -259,156 +279,139 @@
 </style>
 
 <script>
-	import { ref, watch, onMounted } from 'vue'
+	import { ref, watch } from 'vue'
 	import spotify from '@/api/spotify.js'
+	import SpotifyWebApi from 'spotify-web-api-js'
+	import FaseAverageColor from 'fast-average-color'
 
 	export default {
 		name: 'Play',
 		setup() {
-			let start_time = 10
-			let after_time = 5
-			let timer = start_time
-			let autoplay = true
-			let interval = null
-			//let game_rules_edition = false
-			//let volume = 3
-			//let number_of_bars = 50
+			const ready = ref(false)
+			const startTimer = ref(30)
+			const stopMusicAfterTime = ref(10)
+			const autoplay = ref(false)
 
-			//let audio = null
-			//let frequencyData = null
-
-			const gamerules = {
-				Autoplay: true,
-				Theme: '#000, #fff'
-			}
-
-			const title = ref('')
-			const date = ref('')
-			const album = ref('')
-			const author = ref('')
+			const colors = ref(['#ff0000', '#c00000', '#af0000', '#880000', '#580000', '#300000', '#000000'])
+			const rotation = ref(0)
+			const rotationTimer = ref(0)
+			const timer = ref(startTimer.value)
+			const transition = ref(1000)
+			const showAnswer = ref(false)
+			const borders = ref({ width: 0, heigh: 0 })
 			const image = ref(null)
 
-			const borders = ref(null)
-			/*const buttons = {
-				start_game: document.querySelector('.start_button'),
-				full_screen: document.querySelector('.full_screen'),
-				open_gamerule: document.querySelector('.open_gamerule'),
-				close_gamerule: document.querySelector('.close_gamerule')
-			}*/
-			/*const interfaces = {
-				volume_bar: document.querySelector('.volume_bar'),
-				volume_bar_value: document.querySelector('.volume_bar_value'),
-			}*/
-			//const audio = document.querySelector('.music')
-			const timer_number = ref(null)
+			const currentTrack = ref(null)
+			const playlist = ref([])
 
-			function animationTime(customTime = timer){
-				const ratio = ((start_time - customTime) / start_time)
-				const deg = ratio * 360
-				const percentage = ratio * 100
+			let interval = null
+			let spotifyApi = new SpotifyWebApi()
+			let fac = new FaseAverageColor()
+
+			spotifyApi.setAccessToken(localStorage.getItem('spotify_token'))
+			spotifyApi.getPlaylist('4vHIKV7j4QcZwgzGQcZg1x')
+				.then(data => {
+					playlist.value = data.tracks.items
+				}, err => {
+					console.error(err)
+				})
+
+			const getColors = (r = 0, g = 0, b = 0) => {
+
+				const getCode = (val, index) => Math.round(Math.abs(42.5 * index * val)).toString(16).padStart(2, '0')
+
+				const colors = []
+				for (let i = 0; i <= 6; i++) {
+					colors.push('#' + getCode(r, i) + getCode(g, i) + getCode(b, i))
+				}
+				return colors
+			}
+
+			const setCSSEffectsAs = currentTime => {
+				if(currentTime == 'reset') {
+					borders.value.width = 0
+					borders.value.height = 0
+					rotation.value = 0
+					rotationTimer.value = 0
+					return
+				}
+				const ratio = ((startTimer.value - currentTime) / startTimer.value)
 				const start = 21
 				const end = 42
-				document.documentElement.style.setProperty('--rotation-timer', deg + 'deg')
-				borders.value.querySelectorAll('.border.horizontal').forEach(e => { e.style.setProperty('width', (percentage / 2) + 'vw') })
-				borders.value.querySelectorAll('.border.vertical').forEach(e => { e.style.setProperty('height', (percentage / 2) + 'vh') })
-				document.body.style.setProperty('--rotation', (ratio * (end - start) + start) + 'deg')
+				borders.value.width = ratio * 50
+				borders.value.height = ratio * 50
+				rotation.value = ratio * (end - start) + start
+				rotationTimer.value = ratio * 360
 			}
 
-			function showAnswer(){
-				setTimeout(() => {
-					title.value = 'MoonSoon'
-					date.value = '2013'
-					album.value = 'Risk of rain'
-					author.value = 'Chris Christodoulou'
-					image.value.style.setProperty('transform', 'rotate(0deg) scale(100%)')
-					document.body.classList.add('ended')
-				}, 1000)
-				translateTheme('#fff, #242132, #FFA800')
+			const eachSecond = () => {
+				timer.value--
+				if (timer.value >= 0) {
+					setCSSEffectsAs(timer.value)
+				} else if (timer.value == -1) {
+					showAnswer.value = true
+					const rgb = fac.getColor(image.value)
+					colors.value = getColors(rgb.value[0] / 255, rgb.value[1] / 255, rgb.value[2] / 255)
+				} else if (autoplay.value && timer.value == -stopMusicAfterTime.value) {
+					play()
+				}
 			}
 
-			function startMusic(){
-				//containers.game_screen.classList.remove('disable')
-				image.value.setAttribute('src', './risk_of_rain.jpg')
-				nextMusic()
-			}
+			const nextMusic = () =>  {
+				currentTrack.value = playlist.value.splice(Math.floor(Math.random() * playlist.value.length), 1)[0].track
+				let timecode = Math.floor(Math.random() * (currentTrack.value.duration_ms - startTimer.value - stopMusicAfterTime.value))
+				spotify.play(currentTrack.value.uri, timecode)
 
-			function stopMusic() {
-				title.value = ''
-				date.value = ''
-				album.value = ''
-				author.value = ''
-				image.value.style.setProperty('transform', 'rotate(360deg) scale(0%)')
-				document.body.classList.remove('ended')
-				document.documentElement.style.setProperty('--rotation-timer', '0deg')
-				translateTheme(gamerules.Theme)
-				animationTime(start_time)
-			}
-
-			function nextMusic() {
-				timer = start_time
-				timer_number.value.innerHTML = timer
+				timer.value = startTimer.value + 1
+				showAnswer.value = false
 				
 				if(interval){
 					clearInterval(interval)
 				}
+				transition.value = 1000
+				interval = setInterval(eachSecond, 1000)
+			}
 
-				interval = setInterval(() => {
-					timer--
-					if (timer >= 0) {
-						timer_number.value.innerHTML = timer + 1
-						animationTime()
-					}
-					if (timer == 0) {
-						showAnswer()
-					}
-					if (timer == -1) {
-						timer_number.value.innerHTML = 0
-					}
-					if (timer < -(after_time-1)) {
-						stopMusic()
-					}
-					if (timer < -after_time) {
-						if (autoplay) {
-							nextMusic()
-						}
-					}
+			const play = () => {
+				setCSSEffectsAs('reset')
+				transition.value = 1000
+				setTimeout(() => {
+					nextMusic()
 				}, 1000)
 			}
 
-			function translateTheme(theme){
-				const colors = theme.split(', ')
-				if (colors.length == 2) {
-					updateTheme(colors[0], colors[1])
-				} else if (colors.length > 2) {
-					updateTheme(colors[0], colors[1], colors[2])
-				}else{
-					console.warn('bad theme')
+			const skip = () => {
+				if(interval){
+					clearInterval(interval)
 				}
+				transition.value = 100
+				interval = setInterval(eachSecond, 100)
 			}
 
-			function updateTheme(textColor, backgroundColor, accentColor = textColor){
-				document.documentElement.style.setProperty('--text-color', textColor)
-				document.documentElement.style.setProperty('--background-color', backgroundColor)
-				document.documentElement.style.setProperty('--accent-color', accentColor)
-			}
-
-			onMounted(() => {
-				watch(spotify.ready, ready => {
-					if (ready) {
-						spotify.play('spotify:track:7xGfFoTpQ2E7fRF5lN10tr')
-						startMusic()
-					}
-				})
+			watch(spotify.ready, newValue => {
+				ready.value = newValue
+				if(autoplay.value){
+					nextMusic()
+				}
 			})
 
 			return {
-				title,
-				date,
-				album,
-				author,
-				image,
+				ready,
+				startTimer,
+				stopMusicAfterTime,
+				autoplay,
+				colors,
+				rotation,
+				rotationTimer,
+				timer,
+				transition,
+				showAnswer,
 				borders,
-				timer_number,
+				image,
+				currentTrack,
+				playlist,
+				play,
+				skip,
 			}
 		}
 	}
