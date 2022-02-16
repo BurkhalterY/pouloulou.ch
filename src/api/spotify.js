@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 
 let script = document.createElement('script')
+script.setAttribute('id', 'spotifySdk')
 script.setAttribute('src', 'https://sdk.scdn.co/spotify-player.js')
 document.body.appendChild(script)
 

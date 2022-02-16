@@ -28,7 +28,7 @@
 		</div>
 
 		<div class="controls" v-if="ready">
-			<button @click="play">Play</button>
+			<button @click="play" v-if="!autoplay">Play</button>
 			<button @click="skip">Skip</button>
 		</div>
 		<div class="loading" v-else>
@@ -280,6 +280,7 @@
 
 <script>
 	import { ref, watch } from 'vue'
+	import { useRouter } from 'vue-router'
 	import spotify from '@/api/spotify.js'
 	import SpotifyWebApi from 'spotify-web-api-js'
 	import FaseAverageColor from 'fast-average-color'
@@ -287,10 +288,21 @@
 	export default {
 		name: 'Play',
 		setup() {
+			if(!localStorage.getItem('playlistUrl')){
+				localStorage.setItem('playlistUrl', '')
+			}
+			if(!localStorage.getItem('timer')){
+				localStorage.setItem('timer', 30)
+			}
+			if(!localStorage.getItem('autoplay')){
+				localStorage.setItem('autoplay', false)
+			}
+
 			const ready = ref(false)
-			const startTimer = ref(30)
+			const startTimer = ref(parseInt(localStorage.getItem('timer')))
 			const stopMusicAfterTime = ref(10)
-			const autoplay = ref(false)
+			const autoplay = ref(localStorage.getItem('autoplay') === 'true')
+			const playlistUrl = ref(localStorage.getItem('playlistUrl'))
 
 			const colors = ref(['#ff0000', '#c00000', '#af0000', '#880000', '#580000', '#300000', '#000000'])
 			const rotation = ref(0)
@@ -298,22 +310,23 @@
 			const timer = ref(startTimer.value)
 			const transition = ref(1000)
 			const showAnswer = ref(false)
-			const borders = ref({ width: 0, heigh: 0 })
+			const borders = ref({ width: 0, height: 0 })
 			const image = ref(null)
 
 			const currentTrack = ref(null)
 			const playlist = ref([])
 
+			const router = useRouter()
 			let interval = null
-			let spotifyApi = new SpotifyWebApi()
-			let fac = new FaseAverageColor()
+			const spotifyApi = new SpotifyWebApi()
+			const fac = new FaseAverageColor()
 
 			spotifyApi.setAccessToken(localStorage.getItem('spotify_token'))
-			spotifyApi.getPlaylist('4vHIKV7j4QcZwgzGQcZg1x')
+			spotifyApi.getPlaylist(playlistUrl.value)
 				.then(data => {
 					playlist.value = data.tracks.items
-				}, err => {
-					console.error(err)
+				}, () => {
+					router.push({ name: 'Menu' })
 				})
 
 			const getColors = (r = 0, g = 0, b = 0) => {
