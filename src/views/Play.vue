@@ -18,18 +18,25 @@
 			</div>
 		</div>
 
-		<div class="answer" v-if="currentTrack" :class="{ disable: !showAnswer}">
-			<div class="attribute">Artiste : {{ currentTrack.artists.map(artist => artist.name).join() }}</div>
-			<div class="attribute">Titre : {{ currentTrack.name }}</div>
-			<div class="attribute">Album : {{ currentTrack.album.name }} ({{ new Date(currentTrack.album.release_date).getFullYear() }})</div>
-			<div class="image">
+		<div class="answer" v-if="currentTrack">
+			<div class="attribute" v-if="showAnswer || answered.artists.filter(x => x).length > 0">Artiste<span v-if="currentTrack.artists.length > 1">s</span> :
+				<span v-for="(artist, index) in currentTrack.artists.filter((x, i) => answered.artists[i] || showAnswer)" :key="index">
+					<span v-if="index != 0">, </span>
+					{{ artist.name }}
+				</span>
+			</div>
+			<div class="attribute" v-if="showAnswer || answered.title">Titre : {{ currentTrack.name }}</div>
+			<div class="attribute" v-if="showAnswer">Album : {{ currentTrack.album.name }} ({{ new Date(currentTrack.album.release_date).getFullYear() }})</div>
+			<div class="image" :class="{ disable: !showAnswer}">
 				<img crossOrigin="Anonymous" :src="currentTrack.album.images[0].url" ref="image"/>
 			</div>
 		</div>
 
+		<input type="text" v-if="!autoplay && !showAnswer" v-model="answer" v-on:keyup.enter="validate">
+
 		<div class="controls" v-if="ready">
-			<button @click="play" v-if="!autoplay">Play</button>
-			<button @click="skip">Skip</button>
+			<button @click="play" v-if="!autoplay && showAnswer">Play</button>
+			<button @click="skip" v-if="!showAnswer">Skip</button>
 		</div>
 		<div class="loading" v-else>
 			<span>Loading...</span>
@@ -223,6 +230,19 @@
 		max-width: 100%;
 	}
 
+	input {
+		width: 100%;
+		height: 100%;
+		padding: 0;
+		position: relative;
+		background-color: transparent;
+		font-family: Audiowide;
+		font-size: 1000%;
+		text-align: center;
+		z-index: 2;
+		border: none;
+	}
+
 	.controls, .loading {
 		display: flex;
 		justify-content: space-evenly;
@@ -240,6 +260,7 @@
 		border-right: 5px solid v-bind('colors[6]');
 		font-size: 300%;
 		font-family: Audiowide;
+		z-index: 3;
 	}
 
 	.controls > button:active {
@@ -283,6 +304,7 @@
 	import { useRouter } from 'vue-router'
 	import spotify from '@/api/spotify.js'
 	import SpotifyWebApi from 'spotify-web-api-js'
+	import stringSimilarity from 'string-similarity'
 	import FaseAverageColor from 'fast-average-color'
 
 	export default {
@@ -309,7 +331,12 @@
 			const rotationTimer = ref(0)
 			const timer = ref(startTimer.value)
 			const transition = ref(1000)
-			const showAnswer = ref(false)
+			const answer = ref('')
+			const answered = ref({
+				title: false,
+				artists: [],
+			})
+			const showAnswer = ref(true)
 			const borders = ref({ width: 0, height: 0 })
 			const image = ref(null)
 
@@ -331,7 +358,7 @@
 
 			const getColors = (r = 0, g = 0, b = 0) => {
 
-				const getCode = (val, index) => Math.round(Math.abs(42.5 * index * val)).toString(16).padStart(2, '0')
+				const getCode = (val, index) => Math.round(Math.abs(42.5 * index * val / 255)).toString(16).padStart(2, '0')
 
 				const colors = []
 				for (let i = 0; i <= 6; i++) {
@@ -364,20 +391,26 @@
 				} else if (timer.value == -1) {
 					showAnswer.value = true
 					const rgb = fac.getColor(image.value)
-					colors.value = getColors(rgb.value[0] / 255, rgb.value[1] / 255, rgb.value[2] / 255)
+					colors.value = getColors(...rgb.value)
 				} else if (autoplay.value && timer.value == -stopMusicAfterTime.value) {
 					play()
 				}
 			}
 
 			const nextMusic = () =>  {
+				if(playlist.value.length == 0){
+					return
+				}
 				currentTrack.value = playlist.value.splice(Math.floor(Math.random() * playlist.value.length), 1)[0].track
 				let timecode = Math.floor(Math.random() * (currentTrack.value.duration_ms - startTimer.value - stopMusicAfterTime.value))
 				spotify.play(currentTrack.value.uri, timecode)
 
 				timer.value = startTimer.value + 1
 				showAnswer.value = false
-				
+				answered.value.title = false
+				answered.value.artists = new Array(currentTrack.value.artists.length).fill(false)
+				answer.value = ''
+
 				if(interval){
 					clearInterval(interval)
 				}
@@ -401,6 +434,31 @@
 				interval = setInterval(eachSecond, 100)
 			}
 
+			const validate = () => {
+				const compare = (a, b) => stringSimilarity.compareTwoStrings(a.trim().toLowerCase(), b.trim().toLowerCase())
+
+				let correct = false
+				for (let i in currentTrack.value.artists) {
+					if(compare(answer.value, currentTrack.value.artists[i].name) >= 0.8){
+						if(!answered.value.artists[i]){
+							answered.value.artists[i] = true
+							correct = true
+						}
+					}
+				}
+				if(compare(answer.value, currentTrack.value.name) >= 0.8){
+					if(!answered.value.title){
+						answered.value.title = true
+						correct = true
+					}
+				}
+				if (correct) {
+					new Audio(require('@/assets/sounds/suce.mp3')).play();
+				} else {
+					new Audio(require('@/assets/sounds/wrong.mp3')).play();
+				}
+			}
+
 			watch(spotify.ready, newValue => {
 				ready.value = newValue
 				if(autoplay.value){
@@ -418,6 +476,8 @@
 				rotationTimer,
 				timer,
 				transition,
+				answer,
+				answered,
 				showAnswer,
 				borders,
 				image,
@@ -425,6 +485,7 @@
 				playlist,
 				play,
 				skip,
+				validate,
 			}
 		}
 	}

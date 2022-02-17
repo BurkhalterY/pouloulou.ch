@@ -11,7 +11,7 @@
 				</tr>
 				<tr>
 					<td><label for="timer">Timer&nbsp;:</label></td>
-					<td><input type="number" id="timer" min="10" max="60" step="5" v-model.number="timer"></td>
+					<td><input type="number" id="timer" min="10" max="90" step="5" v-model.number="timer"></td>
 				</tr>
 				<tr>
 					<td><label for="autoplay">Mode salon&nbsp;:</label></td>
