@@ -61,7 +61,7 @@
 		name: 'Home',
 		setup() {
 			const login = () => {
-				const client_id = '905e8a6aec324988a525cc0f690c9f63'
+				const client_id = '9267e9db5b254e41ae87f026d2facdd5'
 				const scope = 'user-read-private user-read-email streaming'
 				const redirect_uri = new URL(router.resolve({ name: 'Menu' }).href, window.location.href).href
 				const state = generateRandomString(16)
