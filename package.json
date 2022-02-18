@@ -1,5 +1,5 @@
 {
-  "name": "pouloulou",
+  "name": "Pouloulou.ch",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -9,6 +9,9 @@
   },
   "dependencies": {
     "core-js": "^3.6.5",
+    "fast-average-color": "^7.0.1",
+    "spotify-web-api-js": "^1.5.2",
+    "string-similarity": "^4.0.4",
     "vue": "^3.0.0",
     "vue-router": "^4.0.12"
   },
